@@ -8,6 +8,9 @@ class Feature:
         self.name = name
         self.feature_type = feature_type
         self.thresholds = thresholds
+
+    def __str__(self):
+        return self.name
         
 class DiscretizedFeature(Feature):
     def __init__(self, name, source_feature, sign, threshold):
@@ -25,10 +28,11 @@ class DiscretizedFeature(Feature):
         return self.op == other.op
 
 class IMLI:    
-    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo"):
+    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo", n_partitions=1):
         self.n_clauses = n_clauses
         self.lamda = lamda
         self.solver = solver
+        self.n_partitions = n_partitions
         
         self.B = []
         self.eta = []
@@ -59,7 +63,7 @@ class IMLI:
     
     def _maxsat_solve(self, X, y):
         n_samples = y.shape[0]
-        
+
         random_file_index = random.randint(0, 1000000)
         qname = "query_%d.wcnf" % random_file_index
         with open(qname, "w") as f:            
@@ -90,7 +94,11 @@ class IMLI:
             idx = 1
             for l in range(self.n_clauses):
                 for j in range(self.n_features):
-                    line = "%d %d 0\r\n" % (1, -(idx))
+                    v = -idx
+                    if self.B[l][j] == 1:
+                        v = idx
+
+                    line = "%d %d 0\r\n" % (1, v)
                     f.write(line)
                     idx += 1 # idx = l * n_features + j + 1
             
@@ -149,6 +157,72 @@ class IMLI:
         os.remove(rname)
         os.remove(qname)
 
+    def _remove_redundant_literals(self, B):
+        new_features = self.new_features
+        n_features = self.n_features
+
+        for l in range(self.n_clauses):
+            id_online_features = [j for j in range(self.n_features) if B[l][j] == 1]
+            for i in id_online_features:
+                if not isinstance(new_features[i], DiscretizedFeature):
+                    continue
+
+                for j in id_online_features:
+                    if not isinstance(new_features[j], DiscretizedFeature) \
+                        or not new_features[i].siblings(new_features[j]) \
+                        or new_features[i].tval >= new_features[j].tval:
+                        continue
+
+                    if new_features[i].op == new_features[j].op == ">=":
+                        B[l][j] = 0
+                    else:
+                        B[l][i] = 0
+
+                    print("Redundant %d (%d) %s (%d) %s" % (l, i, new_features[i], j, new_features[j]))
+
+        return B
+
+    def _train(self, X, y):
+        all_data = np.hstack([X, np.expand_dims(y, axis=1)])
+        data = [
+            all_data[all_data[:, -1] == 0],
+            all_data[all_data[:, -1] == 1]
+        ]
+
+        rng = np.random.default_rng()
+        for i in range(2):
+            rng.shuffle(data[i])
+
+        n = [data[0].shape[0], data[1].shape[0]]
+        n_trained = [0, 0]
+
+        # initialization of B
+        self.B, self.eta = self._generate_B_eta(
+            assignment=np.zeros(self.n_clauses * self.n_features),
+            n_samples=0)
+
+        p = self.n_partitions
+        for i in range(p):
+            print("ITERASI %d" % (i + 1))
+            n_to_train = [0, 0]
+            for j in range(2):
+                n_to_train[j] = (n[j] // p) + (1 if i < n[j] % p else 0)
+            
+            data_to_maxsat = np.vstack([
+                data[j][n_trained[j] : n_trained[j] + n_to_train[j]]
+                    for j in range(2)
+                ])
+
+            rng.shuffle(data_to_maxsat)
+            self._maxsat_solve(data_to_maxsat[:, :-1], data_to_maxsat[:, -1])
+
+            for j in range(2):
+                n_trained[j] += n_to_train[j]
+
+            self.B = self._remove_redundant_literals(self.B)
+
+            print(self.get_rule())
+            print("------------------------------")
 
     def _is_binary_array(self, x):
         is_binary = True
@@ -171,26 +245,26 @@ class IMLI:
                         new_X = np.append(new_X, new_col, axis=1)
 
                     new_features.append(DiscretizedFeature(
-                        	name="(X%d %s %f)" % (id_col, sign, point),
-                        	source_feature=cur_feature,
-                        	sign=sign,
-                        	threshold=point
-                        	))
+                            name="(X%d %s %f)" % (id_col, sign, point),
+                            source_feature=cur_feature,
+                            sign=sign,
+                            threshold=point
+                            ))
                         
         elif feature_type == "binary":
             new_col = np.expand_dims(X[:, id_col], axis=1)
         
             new_X = np.append(new_X, new_col, axis=1)
             new_features.append(Feature(
-            		name="X%d" % (id_col),
-            		feature_type="binary"
-            	))
+                    name="X%d" % (id_col),
+                    feature_type="binary"
+                ))
 
             new_X = np.append(new_X, 1 - new_col, axis=1)
             new_features.append(Feature(
-            		name="(NOT X%d)" % (id_col),
-            		feature_type="binary"
-            	))
+                    name="(NOT X%d)" % (id_col),
+                    feature_type="binary"
+                ))
 
         else:
             raise Exception("Make sure your training and test set only contains binary and continuous values.")
@@ -222,10 +296,12 @@ class IMLI:
                 new_X = self._append_X("continuous", new_X, X, i, cur_feature, new_features, thresholds)
                 raw_features.append(cur_feature)
 
+        assert self._is_binary_array(y), "Labels must be a 1D-binary array with 0/1 values."
+
         return new_X, raw_features, new_features
     
     def _preprocess_test(self, X):
-        assert(X.shape[1] == len(self.raw_features))
+        assert X.shape[1] == len(self.raw_features), "Test and train columns does not match."
         
         new_X = np.zeros((X.shape[0], 0))
         for i, feature in enumerate(self.raw_features):
@@ -251,8 +327,8 @@ class IMLI:
         self.n_features = n_features
         self.raw_features = raw_features
         self.new_features = new_features
-        
-        self._maxsat_solve(X, y)
+
+        self._train(X, y)
     
     def predict(self, X):
         """
@@ -279,7 +355,8 @@ class IMLI:
         return "[" + " OR ".join(literals) + "]"
         
     def get_rule(self):
-        unique_clauses = np.unique(self.B, axis = 0)
+        # unique_clauses = np.unique(self.B, axis = 0)
+        unique_clauses = self.B
         rules_array = [self._clause_to_str(clause) for clause in unique_clauses if clause.size > 0]
         rule = " AND ".join(rules_array)
         return rule
