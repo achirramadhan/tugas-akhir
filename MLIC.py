@@ -3,17 +3,42 @@ import Orange
 import os
 import random
 
+import numpy as np
+import Orange
+import os
+import random
+
 class Feature:
     def __init__(self, name, feature_type, thresholds=None):
         self.name = name
         self.feature_type = feature_type
         self.thresholds = thresholds
+
+    def __str__(self):
+        return self.name
+    
+class BinaryFeature(Feature):
+    def __init__(self, is_negated, orig_feature_id):
+        if is_negated:
+            name = "(NOT X%d)" % orig_feature_id
+        else:
+            name = "X%d" % orig_feature_id
+                
+        super().__init__(name, "binary")
+        self.is_negated = is_negated # True or False
+        self.orig_feature_id = orig_feature_id
+        
+    def negation(self):
+        return BinaryFeature(not self.is_negated, self.orig_feature_id)
         
 class DiscretizedFeature(Feature):
-    def __init__(self, name, source_feature, sign, threshold):
-        super().__init__(name, "binary")
+    def __init__(self, source_feature, orig_feature_id, sign, threshold):
+        name = "X%d %s %f" % (orig_feature_id, sign, threshold)
+        
+        super().__init__(name, "discretized")
         self.source_feature = source_feature
-        self.op = sign
+        self.orig_feature_id = orig_feature_id
+        self.op = sign # >= or <
         self.tval = threshold
         
     def siblings(self, other):
@@ -23,12 +48,19 @@ class DiscretizedFeature(Feature):
             return False
         
         return self.op == other.op
+    
+    def negation(self):
+        negated_op = ">=" if self.op == "<" else "<"
+        return DiscretizedFeature(self.source_feature, self.orig_feature_id, negated_op, self.tval)
 
-class IMLI:    
-    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo"):
+class MLIC:    
+    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo", rule_type="CNF", verbose=0, solver_timeout=3600):
         self.n_clauses = n_clauses
         self.lamda = lamda
         self.solver = solver
+        self.rule_type = rule_type
+        self.verbose = verbose
+        self.solver_timeout = solver_timeout
         
         self.B = []
         self.eta = []
@@ -132,9 +164,11 @@ class IMLI:
         # maxSAT
         rname = "result_%d.txt" % random_file_index
 
-        print("MAXSAT SOLVER PROCESSING")
+        if self.verbose == 1:
+            print("MAXSAT SOLVER PROCESSING")
         os.system("%s ./%s > %s" % (self.solver, qname, rname))
-        print("MAXSAT SOLVER DONE")
+        if self.verbose == 1:
+            print("MAXSAT SOLVER DONE")
         
         # get result
         with open(rname, "r") as f:
@@ -169,28 +203,28 @@ class IMLI:
                     elif sign == "<":
                         new_col = (np.expand_dims(X[:, id_col], axis=1) < point).astype(np.int)
                         new_X = np.append(new_X, new_col, axis=1)
-
+                        
                     new_features.append(DiscretizedFeature(
-                        	name="(X%d %s %f)" % (id_col, sign, point),
-                        	source_feature=cur_feature,
-                        	sign=sign,
-                        	threshold=point
-                        	))
+                            source_feature=cur_feature,
+                            orig_feature_id=id_col,
+                            sign=sign,
+                            threshold=point
+                            ))
                         
         elif feature_type == "binary":
             new_col = np.expand_dims(X[:, id_col], axis=1)
         
             new_X = np.append(new_X, new_col, axis=1)
-            new_features.append(Feature(
-            		name="X%d" % (id_col),
-            		feature_type="binary"
-            	))
+            new_features.append(BinaryFeature(
+                    is_negated=False,
+                    orig_feature_id=id_col
+                ))
 
             new_X = np.append(new_X, 1 - new_col, axis=1)
-            new_features.append(Feature(
-            		name="(NOT X%d)" % (id_col),
-            		feature_type="binary"
-            	))
+            new_features.append(BinaryFeature(
+                    is_negated=True,
+                    orig_feature_id=id_col
+                ))
 
         else:
             raise Exception("Make sure your training and test set only contains binary and continuous values.")
@@ -252,7 +286,12 @@ class IMLI:
         self.raw_features = raw_features
         self.new_features = new_features
         
-        self._maxsat_solve(X, y)
+        if self.rule_type == "CNF":
+            self._maxsat_solve(X, y)
+        elif self.rule_type == "DNF":
+            self._maxsat_solve(X, 1 - y)
+        else:
+            raise Exception('Rule type must be "CNF" or "DNF".')
     
     def predict(self, X):
         """
@@ -269,18 +308,34 @@ class IMLI:
         
         X = self._preprocess_test(X)
         preds = np.matmul(X, self.B.T).prod(axis=1)
+        preds = (preds > 0).astype(np.int)
         
-        return (preds > 0).astype(np.int)
+        if self.rule_type == "CNF":
+            return preds
+        elif self.rule_type == "DNF":
+            return 1 - preds
+        else:
+            raise Exception('Rule type must be "CNF" or "DNF".')
     
     def _clause_to_str(self, clause):
         n_features = self.n_features
         new_features = self.new_features
-        literals = [new_features[j].name for j in range(n_features) if clause[j] == 1]
-        return "[" + " OR ".join(literals) + "]"
         
+        if self.rule_type == "CNF":
+            literals = [new_features[j].name for j in range(n_features) if clause[j] == 1]
+            return "[" + " OR ".join(literals) + "]"
+        elif self.rule_type == "DNF":
+            literals = [new_features[j].negation().name for j in range(n_features) if clause[j] == 1]
+            return "[" + " AND ".join(literals) + "]"
+                 
     def get_rule(self):
-        unique_clauses = np.unique(self.B, axis = 0)
+        # unique_clauses = np.unique(self.B, axis = 0)
+        unique_clauses = self.B
         rules_array = [self._clause_to_str(clause) for clause in unique_clauses if clause.size > 0]
-        rule = " AND ".join(rules_array)
+        
+        if self.rule_type == "CNF":
+            rule = " AND ".join(rules_array)
+        elif self.rule_type == "DNF":
+            rule = " OR ".join(rules_array)
         return rule
     
