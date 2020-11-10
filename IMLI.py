@@ -4,13 +4,26 @@ import os
 import random
 
 class Feature:
-    def __init__(self, name, feature_type, thresholds=None):
+    def __init__(self, name, feature_type, thresholds=None, categories=None):
         self.name = name
         self.feature_type = feature_type
         self.thresholds = thresholds
+        self.categories = categories
 
     def __str__(self):
         return self.name
+    
+class CategoricalFeature(Feature):
+    def __init__(self, orig_feature_id, sign, category):
+        name = "X%d %s %f" % (orig_feature_id, sign, category)
+        super().__init__(name, "categorical")
+        self.orig_feature_id = orig_feature_id
+        self.op = sign
+        self.category = category
+        
+    def negation(self):
+        negated_op = "==" if self.op == "!=" else "!="
+        return CategoricalFeature(self.orig_feature_id, negated_op, self.category)
     
 class BinaryFeature(Feature):
     def __init__(self, is_negated, orig_feature_id):
@@ -273,17 +286,19 @@ class IMLI:
 
         return is_binary
     
-    def _append_X(self, feature_type, new_X, X, id_col, cur_feature, new_features=[], thresholds=None):
+    def _append_X(self, feature_type, new_X, X, id_col, cur_feature, new_features=[], thresholds=None, categories=None):
+        """
+        Process raw features to new features, make sure every feature has its negation
+        """
         if feature_type == "continuous":
             for sign in (">=", "<"):
                 for point in thresholds:
                     if sign == ">=":
                         new_col = (np.expand_dims(X[:, id_col], axis=1) >= point).astype(np.int)
-                        new_X = np.append(new_X, new_col, axis=1)
                     elif sign == "<":
                         new_col = (np.expand_dims(X[:, id_col], axis=1) < point).astype(np.int)
-                        new_X = np.append(new_X, new_col, axis=1)
-                        
+                    
+                    new_X = np.append(new_X, new_col, axis=1)
                     new_features.append(DiscretizedFeature(
                             source_feature=cur_feature,
                             orig_feature_id=id_col,
@@ -305,54 +320,81 @@ class IMLI:
                     is_negated=True,
                     orig_feature_id=id_col
                 ))
-
+            
+        elif feature_type == "categorical":
+            for sign in ("==", "!="):
+                for category in categories:
+                    if sign == "==":
+                        new_col = (np.expand_dims(X[:, id_col], axis=1) == category).astype(np.int)
+                    elif sign == "!=":
+                        new_col = (np.expand_dims(X[:, id_col], axis=1) != category).astype(np.int)
+                    
+                    new_X = np.append(new_X, new_col, axis=1)
+                    new_features.append(CategoricalFeature(
+                            orig_feature_id=id_col,
+                            sign=sign,
+                            category=category
+                            ))
+                
         else:
             raise Exception("Make sure your training and test set only contains binary and continuous values.")
         
         return new_X
     
-    def _preprocess_train(self, X, y):
+    def generate_features(self, X, y, categorical_features_id=[], discretizer="entropy"):
         """
-        Discretize continuous features and extend with its negation for already binary features
-        Also make sure every features already have its negation in the data
-        """
-        new_X = np.zeros((X.shape[0], 0))
-        raw_features = []
-        new_features = []
+        Generate the dataset features to be used in this model
+        Category feature must be represented as numbers
+        categorical_features_id use 0-based indexing
         
-        disc = Orange.preprocess.discretize.EntropyMDL()
-        domain = Orange.data.Domain.from_numpy(X, y)
-        orange_table = Orange.data.Table.from_numpy(domain, X, y)
+        Return features, type, and its thresholds/categories
+        """
+        raw_features = []
+        
+        if discretizer=="entropy":
+            disc = Orange.preprocess.discretize.EntropyMDL()
+            domain = Orange.data.Domain.from_numpy(X, y)
+            orange_table = Orange.data.Table.from_numpy(domain, X, y)
         
         for i, attr in enumerate(orange_table.domain.attributes):
-            if self._is_binary_array(X[:, i]):
-                cur_feature = Feature(name="X%d" % i, feature_type="binary")
-                new_X = self._append_X("binary", new_X, X, i, cur_feature, new_features)
-                raw_features.append(cur_feature)
+            if i in categorical_features_id:
+                categories = np.unique(X[:, i])
+                cur_feature = Feature(name="X%d" % i, feature_type="raw_categorical", categories=categories)
+            elif self._is_binary_array(X[:, i]):
+                cur_feature = Feature(name="X%d" % i, feature_type="raw_binary")
             else:
-                disc_attr = disc(orange_table, attr)
-                thresholds = disc_attr.compute_value.points
-                cur_feature = Feature(name="X%d" % i, feature_type="continuous", thresholds=thresholds)
-                new_X = self._append_X("continuous", new_X, X, i, cur_feature, new_features, thresholds)
-                raw_features.append(cur_feature)
+                if discretizer=="entropy":
+                    disc_attr = disc(orange_table, attr)
+                    thresholds = disc_attr.compute_value.points
+                else:
+                    assert False, "Available discretizer is only entropy"
+                    
+                cur_feature = Feature(name="X%d" % i, feature_type="raw_continuous", thresholds=thresholds)
+               
+            raw_features.append(cur_feature)
 
         assert self._is_binary_array(y), "Labels must be a 1D-binary array with 0/1 values."
 
-        return new_X, raw_features, new_features
+        return raw_features
     
-    def _preprocess_test(self, X):
+    def _preprocess(self, X):
         assert X.shape[1] == len(self.raw_features), "Test and train columns does not match."
         
         new_X = np.zeros((X.shape[0], 0))
+        new_features = []
         for i, feature in enumerate(self.raw_features):
-            if feature.feature_type == "binary":
-                new_X = self._append_X("binary", new_X, X, i, feature)
-            elif feature.feature_type == "continuous":
-                new_X = self._append_X("continuous", new_X, X, i, feature, thresholds=feature.thresholds)
+            if feature.feature_type == "raw_binary":
+                new_X = self._append_X("binary", new_X, X, i, feature, new_features)
+            elif feature.feature_type == "raw_continuous":
+                new_X = self._append_X("continuous", new_X, X, i, feature, new_features, thresholds=feature.thresholds)
+            elif feature.feature_type == "raw_categorical":
+                new_X = self._append_X("categorical", new_X, X, i, feature, new_features, categories=feature.categories)
+            else:
+                assert False, 'feature type must be raw_binary, raw_continuous, or raw_categorical'
                 
-        return new_X
+        return new_X, new_features
     
-    def fit(self, X, y):
+    def fit(self, X, y, raw_features):
         """
         Parameters
         ----------
@@ -364,10 +406,10 @@ class IMLI:
         """
         assert self._is_binary_array(y), "y must have values 0/1."
         
-        X, raw_features, new_features = self._preprocess_train(X, y)
+        self.raw_features = raw_features
+        X, new_features = self._preprocess(X)
         n_features = X.shape[1]
         self.n_features = n_features
-        self.raw_features = raw_features
         self.new_features = new_features
 
         if self.rule_type == "CNF":
@@ -390,7 +432,7 @@ class IMLI:
             Returns predicted values.
         """
         
-        X = self._preprocess_test(X)
+        X, _ = self._preprocess(X)
         preds = np.matmul(X, self.B.T).prod(axis=1)
         
         preds = (preds > 0).astype(np.int)
