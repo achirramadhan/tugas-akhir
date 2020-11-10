@@ -1,0 +1,33 @@
+l: lamda, n_clause, rule_type, train_size, val_size, id_cv, n_features, training_time, accuracy, rule_size, rule
+l: 5,1,CNF,284,32,0,190,107.712686,0.906250,1,[X4 >= 0.041440]
+l: 5,1,CNF,284,32,1,196,19.161344,0.781250,1,[X4 >= 0.041440]
+l: 5,1,CNF,284,32,2,204,79.636195,0.875000,1,[X4 >= 0.041440]
+l: 5,1,CNF,284,32,3,210,67.160322,0.718750,1,[X6 >= 0.037175]
+l: 5,1,CNF,284,32,4,176,56.430520,0.812500,1,[X4 >= 0.041440]
+l: 5,1,CNF,284,32,5,180,27.936429,0.812500,1,[X4 >= 0.041440]
+l: 5,1,CNF,285,31,6,196,95.434923,0.806452,1,[X4 >= 0.041440]
+l: 5,1,CNF,285,31,7,184,51.552020,0.774194,1,[X4 >= 0.041440]
+l: 5,1,CNF,285,31,8,200,56.142465,0.838710,1,[X6 >= 0.037175]
+l: 5,1,CNF,285,31,9,212,76.746079,0.774194,1,[X4 >= 0.033205]
+r: ---> Result: {'lamda': 5, 'n_clause': 1, 'rule_type': 'CNF'}, (mean val acc cv) 0.809980 (std: 0.051045), (mean training time) 63.791298 (std: 26.268869)
+l: 5,1,DNF,284,32,0,196,0.917420,0.968750,10,[X2 >= 0.190280 AND X4 >= 0.041440 AND X5 >= -0.892545 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.555430 AND X15 < 0.968410 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X28 >= -0.911830]
+l: 5,1,DNF,284,32,1,182,6.147877,0.968750,10,[X2 >= 0.190280 AND X4 >= 0.041440 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.554585 AND X15 < 0.968410 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X28 >= -0.911830]
+l: 5,1,DNF,284,32,2,202,0.979074,0.937500,8,[X2 >= 0.190280 AND X4 >= 0.041440 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X23 >= -0.987455]
+l: 5,1,DNF,284,32,3,198,0.981740,1.000000,10,[X2 >= 0.190280 AND X4 >= 0.041440 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.554585 AND X15 < 0.953325 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X28 >= -0.911830]
+l: 5,1,DNF,284,32,4,190,3.413742,0.906250,9,[X2 >= 0.190280 AND X4 >= 0.041440 AND X5 >= -0.795310 AND X7 >= -0.628305 AND X9 >= -0.755855 AND X13 >= -0.554585 AND X15 < 0.968410 AND X17 >= -0.718380 AND X28 >= -0.911830]
+l: 5,1,DNF,284,32,5,188,0.669617,0.906250,9,[X2 >= 0.190280 AND X3 >= -0.619030 AND X4 >= 0.041440 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.465535 AND X15 < 0.968410 AND X15 >= -0.917595 AND X28 >= -0.911830]
+l: 5,1,DNF,285,31,6,196,0.929586,0.935484,10,[X0 AND X2 >= 0.190280 AND X4 >= 0.041440 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.554585 AND X15 < 0.968410 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X28 >= -0.911830]
+l: 5,1,DNF,285,31,7,186,2.095554,0.935484,9,[X2 >= 0.140810 AND X4 >= 0.023130 AND X5 >= -0.795310 AND X7 >= -0.628305 AND X9 >= -0.572990 AND X13 >= -0.543410 AND X15 >= -0.612835 AND X19 >= -0.944760 AND X23 >= -0.987455]
+l: 5,1,DNF,285,31,8,202,0.803915,0.870968,8,[X2 >= 0.190280 AND X4 >= 0.041440 AND X5 >= -0.747290 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.554585 AND X15 < 0.968410 AND X15 >= -0.905170]
+l: 5,1,DNF,285,31,9,190,0.636464,0.870968,9,[X2 >= 0.200095 AND X3 >= -0.932245 AND X4 >= 0.051515 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X15 < 0.968410 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X28 >= -0.911830]
+r: ---> Result: {'lamda': 5, 'n_clause': 1, 'rule_type': 'DNF'}, (mean val acc cv) 0.930040 (std: 0.040146), (mean training time) 1.757499 (std: 1.675747)
+Traceback (most recent call last):
+  File "/root/skripsi/experiment/imli/testing-dir/ionosphere/mlic/methodology-validation/mlic_runner_methodology_validation.py", line 161, in <module>
+    run_mlic(sys.argv[1], int(sys.argv[2]))
+  File "/root/skripsi/experiment/imli/testing-dir/ionosphere/mlic/methodology-validation/mlic_runner_methodology_validation.py", line 62, in run_mlic
+    mlic.fit(X_train_val[train_id], y_train_val[train_id])
+  File "/root/skripsi/experiment/imli/MLIC.py", line 296, in fit
+    self._maxsat_solve(X, y)
+  File "/root/skripsi/experiment/imli/MLIC.py", line 187, in _maxsat_solve
+    raise Exception("%s fail to return assignment." % self.solver)
+Exception: /root/skripsi/MaxHS/build/release/bin/maxhs fail to return assignment.

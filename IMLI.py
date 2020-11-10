@@ -49,14 +49,14 @@ class DiscretizedFeature(Feature):
         return DiscretizedFeature(self.source_feature, self.orig_feature_id, negated_op, self.tval)
 
 class IMLI:    
-    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo", n_partitions=1, rule_type="CNF", verbose=0, solver_timeout=3600):
+    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo", n_partitions=1, rule_type="CNF", verbose=0, timeout=3600):
         self.n_clauses = n_clauses
         self.lamda = lamda
         self.solver = solver
         self.n_partitions = n_partitions
         self.rule_type = rule_type
         self.verbose = verbose
-        self.solver_timeout = solver_timeout
+        self.timeout = timeout
         
         self.B = []
         self.eta = []
@@ -167,12 +167,16 @@ class IMLI:
         if self.verbose == 1:
             print("MAXSAT SOLVER PROCESSING")
             
-        os.system("%s -cpu-lim=%d ./%s > %s" % (self.solver, self.solver_timeout, qname, rname))
+        solver_timeout = (self.timeout + self.n_partitions - 1) // self.n_partitions
+        if solver_timeout < 1:
+            solver_timeout = 1
+        os.system("%s -cpu-lim=%d ./%s > %s" % (self.solver, solver_timeout, qname, rname))
         
         if self.verbose == 1:
             print("MAXSAT SOLVER DONE")
         
         # get result
+        assignment_found = False
         with open(rname, "r") as f:
             lines = f.readlines()
             for line in lines:
@@ -180,7 +184,12 @@ class IMLI:
                     continue
                 elif line[0] == 'v':
                     assignment = [int(u) for u in line.split(' ')[1:-1] ]
+                    if assignment != []:
+                        assignment_found = True
                     self.B, self.eta = self._generate_B_eta(assignment, n_samples)
+        
+        if not assignment_found:
+            raise Exception("%s fail to return assignment." % self.solver)
         
         os.remove(rname)
         os.remove(qname)
@@ -416,3 +425,5 @@ class IMLI:
         
         return rule
     
+    def get_rule_size(self):
+        return np.sum(self.B)

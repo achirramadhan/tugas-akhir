@@ -54,13 +54,13 @@ class DiscretizedFeature(Feature):
         return DiscretizedFeature(self.source_feature, self.orig_feature_id, negated_op, self.tval)
 
 class MLIC:    
-    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo", rule_type="CNF", verbose=0, solver_timeout=3600):
+    def __init__(self, n_clauses=3, lamda=3, solver="open-wbo", rule_type="CNF", verbose=0, timeout=3600):
         self.n_clauses = n_clauses
         self.lamda = lamda
         self.solver = solver
         self.rule_type = rule_type
         self.verbose = verbose
-        self.solver_timeout = solver_timeout
+        self.timeout = timeout
         
         self.B = []
         self.eta = []
@@ -93,7 +93,7 @@ class MLIC:
         n_samples = y.shape[0]
         
         random_file_index = random.randint(0, 1000000)
-        qname = "query_%d.wcnf" % random_file_index
+        qname = "query_%d_%d_%d_%s.wcnf" % (random_file_index, self.n_clauses, self.lamda, self.rule_type)
         with open(qname, "w") as f:            
             # define parameters            
             unique, counts = np.unique(y, return_counts = True)
@@ -162,15 +162,16 @@ class MLIC:
                         f.write(line)
                     
         # maxSAT
-        rname = "result_%d.txt" % random_file_index
+        rname = "result_%d_%d_%d_%s.txt" % (random_file_index, self.n_clauses, self.lamda, self.rule_type)
 
         if self.verbose == 1:
             print("MAXSAT SOLVER PROCESSING")
-        os.system("%s ./%s > %s" % (self.solver, qname, rname))
+        os.system("%s -cpu-lim=%d ./%s > %s" % (self.solver, self.timeout, qname, rname))
         if self.verbose == 1:
             print("MAXSAT SOLVER DONE")
         
         # get result
+        assignment_found = False
         with open(rname, "r") as f:
             lines = f.readlines()
             for line in lines:
@@ -178,7 +179,12 @@ class MLIC:
                     continue
                 elif line[0] == 'v':
                     assignment = [int(u) for u in line.split(' ')[1:-1] ]
+                    if assignment != []:
+                        assignment_found = True
                     self.B, self.eta = self._generate_B_eta(assignment, n_samples)
+        
+        if not assignment_found:
+            raise Exception("%s fail to return assignment." % self.solver)
         
         os.remove(rname)
         os.remove(qname)
@@ -339,3 +345,5 @@ class MLIC:
             rule = " OR ".join(rules_array)
         return rule
     
+    def get_rule_size(self):
+        return np.sum(self.B)

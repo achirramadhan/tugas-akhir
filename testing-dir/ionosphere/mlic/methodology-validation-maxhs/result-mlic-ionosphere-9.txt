@@ -1,0 +1,33 @@
+l: lamda, n_clause, rule_type, train_size, val_size, id_cv, n_features, training_time, accuracy, rule_size, rule
+l: 5,1,CNF,284,32,0,208,69.619563,0.750000,1,[X4 >= 0.051515]
+l: 5,1,CNF,284,32,1,194,67.374807,0.812500,1,[X4 >= 0.051515]
+l: 5,1,CNF,284,32,2,206,78.044346,0.843750,1,[X26 < 0.999945]
+l: 5,1,CNF,284,32,3,210,124.604022,0.843750,1,[X26 < 0.999945]
+l: 5,1,CNF,284,32,4,186,66.673372,0.843750,1,[X26 < 0.999945]
+l: 5,1,CNF,284,32,5,198,91.783272,0.812500,1,[X4 >= 0.231540]
+l: 5,1,CNF,285,31,6,176,19.323252,0.774194,1,[X26 < 0.999945]
+l: 5,1,CNF,285,31,7,204,63.247116,0.806452,1,[X4 >= 0.051515]
+l: 5,1,CNF,285,31,8,202,72.870843,0.741935,1,[X4 >= 0.231540]
+l: 5,1,CNF,285,31,9,196,67.569121,0.774194,1,[X26 < 0.999945]
+r: ---> Result: {'lamda': 5, 'n_clause': 1, 'rule_type': 'CNF'}, (mean val acc cv) 0.800302 (std: 0.036468), (mean training time) 72.110971 (std: 24.743176)
+l: 5,1,DNF,284,32,0,188,1.069155,0.937500,9,[X2 >= 0.200095 AND X4 >= 0.051515 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.499810 AND X13 >= -0.555430 AND X15 >= -0.905170 AND X17 >= -0.813050 AND X23 >= -0.987455]
+l: 5,1,DNF,284,32,1,210,2.184108,0.843750,8,[X2 >= 0.200095 AND X3 < 0.563610 AND X4 >= 0.051515 AND X5 >= -0.795310 AND X7 >= -0.987250 AND X13 >= -0.549880 AND X15 < 0.968410 AND X17 >= -0.805795]
+l: 5,1,DNF,284,32,2,190,1.380485,0.968750,9,[X2 >= 0.200095 AND X3 >= -0.962265 AND X4 >= 0.051515 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.555430 AND X15 >= -0.917595 AND X17 >= -0.805795]
+l: 5,1,DNF,284,32,3,202,1.561420,0.906250,8,[X2 >= 0.200095 AND X3 >= -0.609635 AND X4 >= 0.231540 AND X5 >= -0.892545 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X15 >= -0.905170 AND X23 >= -0.987455]
+l: 5,1,DNF,284,32,4,210,1.198839,0.937500,8,[X2 >= 0.200095 AND X4 >= 0.051515 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X23 >= -0.987455]
+l: 5,1,DNF,284,32,5,198,1.743084,0.906250,8,[X2 >= 0.217950 AND X4 >= 0.145975 AND X5 >= -0.795310 AND X7 >= -0.395355 AND X9 >= -0.572990 AND X13 >= -0.607905 AND X15 >= -0.905170 AND X23 >= -0.987455]
+l: 5,1,DNF,285,31,6,186,0.682350,0.935484,9,[X2 >= 0.200095 AND X4 >= 0.051515 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.555430 AND X15 < 0.968410 AND X15 >= -0.905170 AND X17 >= -0.805795]
+l: 5,1,DNF,285,31,7,196,0.613436,0.870968,9,[X2 >= 0.200095 AND X4 >= 0.051515 AND X5 >= -0.607710 AND X7 >= -0.903245 AND X9 >= -0.572990 AND X13 >= -0.555430 AND X15 >= -0.905170 AND X17 >= -0.796670 AND X23 >= -0.987455]
+l: 5,1,DNF,285,31,8,198,1.890838,0.903226,8,[X2 >= 0.193085 AND X4 >= 0.231540 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.555430 AND X15 >= -0.645720 AND X23 >= -0.987455]
+l: 5,1,DNF,285,31,9,186,0.578763,0.967742,9,[X2 >= 0.200095 AND X4 >= 0.033205 AND X5 >= -0.795310 AND X7 >= -0.983575 AND X9 >= -0.572990 AND X13 >= -0.555430 AND X15 >= -0.905170 AND X17 >= -0.805795 AND X23 >= -0.987455]
+r: ---> Result: {'lamda': 5, 'n_clause': 1, 'rule_type': 'DNF'}, (mean val acc cv) 0.917742 (std: 0.037861), (mean training time) 1.290248 (std: 0.532681)
+Traceback (most recent call last):
+  File "/root/skripsi/experiment/imli/testing-dir/ionosphere/mlic/methodology-validation/mlic_runner_methodology_validation.py", line 161, in <module>
+    run_mlic(sys.argv[1], int(sys.argv[2]))
+  File "/root/skripsi/experiment/imli/testing-dir/ionosphere/mlic/methodology-validation/mlic_runner_methodology_validation.py", line 62, in run_mlic
+    mlic.fit(X_train_val[train_id], y_train_val[train_id])
+  File "/root/skripsi/experiment/imli/MLIC.py", line 296, in fit
+    self._maxsat_solve(X, y)
+  File "/root/skripsi/experiment/imli/MLIC.py", line 187, in _maxsat_solve
+    raise Exception("%s fail to return assignment." % self.solver)
+Exception: /root/skripsi/MaxHS/build/release/bin/maxhs fail to return assignment.
