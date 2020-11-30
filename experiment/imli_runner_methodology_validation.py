@@ -1,10 +1,10 @@
 import sys
-sys.path.insert(1, '/root/skripsi/experiment/imli')
+sys.path.insert(1, '/root/skripsi/imli')
 
 def run_imli(DATASET_NAME, ID_HOLDOUT):
     # Load Dataset
     import pandas as pd
-    HOLDOUT_DIR = "/root/skripsi/experiment/imli/testing-dir/%s/holdout/" % DATASET_NAME
+    HOLDOUT_DIR = "/root/skripsi/imli/testing-dir/%s/holdout/" % DATASET_NAME
     df_train_val = pd.read_csv(HOLDOUT_DIR + ("%s-%d-train.csv" % (DATASET_NAME, ID_HOLDOUT))).sample(frac=1)
     df_test = pd.read_csv(HOLDOUT_DIR + ("%s-%d-test.csv" % (DATASET_NAME, ID_HOLDOUT))).sample(frac=1)
 

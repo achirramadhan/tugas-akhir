@@ -341,33 +341,46 @@ class IMLI:
         
         return new_X
     
-    def generate_features(self, X, y, categorical_features_id=[], discretizer="entropy"):
+    def generate_features(self, X, y, categorical_features_id=[], discretizer="entropy", n_thresholds=9):
         """
         Generate the dataset features to be used in this model
         Category feature must be represented as numbers
         categorical_features_id use 0-based indexing
         
-        Return features, type, and its thresholds/categories
+        Return features: type and its thresholds/categories
         """
         raw_features = []
         
-        if discretizer=="entropy":
+        if discretizer == "entropy":
             disc = Orange.preprocess.discretize.EntropyMDL()
             domain = Orange.data.Domain.from_numpy(X, y)
             orange_table = Orange.data.Table.from_numpy(domain, X, y)
+            attrs = orange_table.domain.attributes
         
-        for i, attr in enumerate(orange_table.domain.attributes):
-            if i in categorical_features_id:
+        for i in range(X.shape[1]):
+            unique_vals = np.unique(X[:, i])
+            if unique_vals.shape[0] < 2:
+                # throw the feature by take is as a categorical feature with 0 category
+                cur_feature = Feature(name="X%d" % i, feature_type="raw_categorical", categories=[])
+            elif i in categorical_features_id:
                 categories = np.unique(X[:, i])
                 cur_feature = Feature(name="X%d" % i, feature_type="raw_categorical", categories=categories)
             elif self._is_binary_array(X[:, i]):
                 cur_feature = Feature(name="X%d" % i, feature_type="raw_binary")
             else:
-                if discretizer=="entropy":
+                if discretizer == "entropy":
+                    attr = attrs[i]
                     disc_attr = disc(orange_table, attr)
                     thresholds = disc_attr.compute_value.points
+                elif discretizer == "quantile":
+                    if unique_vals.shape[0] <= n_thresholds + 1:
+                        # exclude minimum since we use < and >=
+                        thresholds = np.sort(unique_vals)[1:]
+                    else:
+                        quantile_thresholds = np.linspace(1./(n_thresholds + 1.), n_thresholds/(n_thresholds + 1.), n_thresholds)
+                        thresholds = np.unique(np.quantile(X[:, i], quantile_thresholds))
                 else:
-                    assert False, "Available discretizer is only entropy"
+                    assert False, 'Available discretizers are "entropy" and "quantile"'
                     
                 cur_feature = Feature(name="X%d" % i, feature_type="raw_continuous", thresholds=thresholds)
                
@@ -378,7 +391,7 @@ class IMLI:
         return raw_features
     
     def _preprocess(self, X):
-        assert X.shape[1] == len(self.raw_features), "Test and train columns does not match."
+        assert X.shape[1] == len(self.raw_features), "Data columns and number of features does not match"
         
         new_X = np.zeros((X.shape[0], 0))
         new_features = []
