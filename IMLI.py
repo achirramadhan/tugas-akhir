@@ -15,7 +15,7 @@ class Feature:
     
 class CategoricalFeature(Feature):
     def __init__(self, orig_feature_id, sign, category):
-        name = "X%d %s %f" % (orig_feature_id, sign, category)
+        name = "X{} {} {}".format(orig_feature_id, sign, category)
         super().__init__(name, "categorical")
         self.orig_feature_id = orig_feature_id
         self.op = sign
