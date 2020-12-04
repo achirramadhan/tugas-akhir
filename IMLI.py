@@ -101,7 +101,7 @@ class IMLI:
     def _maxsat_solve(self, X, y):
         n_samples = y.shape[0]
 
-        random_file_index = random.randint(0, 1000000)
+        random_file_index = random.randint(0, 1000000000000000000)
         qname = "query_%d_%d_%d_%d_%s.wcnf" % (random_file_index, self.n_clauses, self.lamda, self.n_partitions, self.rule_type)
         with open(qname, "w") as f:            
             # define parameters            
