@@ -196,7 +196,7 @@ class IMLI:
                 if not line or line[0] == 'c':
                     continue
                 elif line[0] == 'v':
-                    assignment = [int(u) for u in line.split(' ')[1:-1] ]
+                    assignment = [int(u) for u in line.strip().split()[1:] ]
                     if assignment != []:
                         assignment_found = True
                     self.B, self.eta = self._generate_B_eta(assignment, n_samples)
