@@ -38,7 +38,7 @@ def run_imli(DATASET_NAME, ID_HOLDOUT, CATEGORICAL_FEATURES):
     features = IMLI().generate_features(
         X_total,
         y_total,
-        categorical_features_id=CATEGORICAL_FEATURES,
+        categorical_features_id=[int(u) for u in CATEGORICAL_FEATURES],
         discretizer="entropy"
 #         n_thresholds=9
     )
