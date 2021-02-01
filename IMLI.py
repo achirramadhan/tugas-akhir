@@ -287,9 +287,6 @@ class IMLI:
         return is_binary
     
     def _append_X(self, feature_type, new_X, X, id_col, cur_feature, new_features=[], thresholds=None, categories=None):
-        """
-        Process raw features to new features, make sure every feature has its negation
-        """
         if feature_type == "continuous":
             for sign in (">=", "<"):
                 for point in thresholds:
@@ -342,13 +339,6 @@ class IMLI:
         return new_X
     
     def generate_features(self, X, y, categorical_features_id=[], discretizer="entropy", n_thresholds=9):
-        """
-        Generate the dataset features to be used in this model
-        Category feature must be represented as numbers
-        categorical_features_id use 0-based indexing
-        
-        Return features: type and its thresholds/categories
-        """
         raw_features = []
         
         if discretizer == "entropy":
@@ -408,15 +398,6 @@ class IMLI:
         return new_X, new_features
     
     def fit(self, X, y, raw_features):
-        """
-        Parameters
-        ----------
-        X : 2D-array of shape (n_samples, n_features)
-            Training data
-        
-        y : 1D-array of shape (n_samples,) with values 0/1
-            Target class
-        """
         assert self._is_binary_array(y), "y must have values 0/1."
         
         self.raw_features = raw_features
@@ -433,18 +414,6 @@ class IMLI:
             raise Exception('Rule type must be "CNF" or "DNF".')
     
     def predict(self, X):
-        """
-        Parameters
-        ----------
-        X : 2D-array of shape (n_samples, n_features)
-            Samples.
-        
-        Returns
-        -------
-        C : 1D-array of shape (n_samples,)
-            Returns predicted values.
-        """
-        
         X, _ = self._preprocess(X)
         preds = np.matmul(X, self.B.T).prod(axis=1)
         
